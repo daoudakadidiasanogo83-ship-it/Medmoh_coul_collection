@@ -8,7 +8,7 @@ function charger(){
       '<td><strong>'+esc(p.nom)+'</strong><br><small>'+esc(p.cat)+(p.actif?'':' · masqué')+(p.vendeur&&ME.role==='gerant'?' · '+esc(p.vendeur):'')+'</small></td>'+
       '<td>'+p.prix.toLocaleString("fr-FR")+' FCFA</td>'+
       '<td><button data-e="'+p.id+'">Modifier</button> <button data-d="'+p.id+'">Supprimer</button></td></tr>';
-    }).join("") || '<tr><td>Aucun produit. Ajoutez le premier ci-dessus.</td></tr>';
+    }).join("") || '<tr><td>Aucun produit pour le moment. Ajoutez le premier avec le formulaire ci-dessus.</td></tr>';
   });
 }
 function vider(){ f.reset(); f.elements.pid.value=""; annuler.hidden=true; ok.textContent="Ajouter le produit"; }
@@ -43,8 +43,8 @@ function chargerEquipe(){
 fv.onsubmit = function(e){
   e.preventDefault();
   fetch("/api/admin/vendeurs",{method:"POST",body:new FormData(fv)}).then(function(r){
-    if(r.status===409){ alert("Cet email est déjà utilisé."); return; }
-    if(!r.ok){ alert("Vérifiez le nom, l'email et le mot de passe (8 caractères minimum)."); return; }
+    if(r.status===409){ alert("Cette adresse e-mail est déjà utilisée."); return; }
+    if(!r.ok){ alert("Vérifiez le nom, l'adresse e-mail et le mot de passe (8 caractères minimum)."); return; }
     fv.reset(); chargerEquipe();
   });
 };

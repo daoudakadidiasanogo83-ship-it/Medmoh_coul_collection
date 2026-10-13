@@ -233,11 +233,23 @@ def register():
     return jsonify(ok=True)
 
 
-LOGIN = """<!DOCTYPE html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>Connexion</title><style>*{{box-sizing:border-box}}</style><form method=post style="max-width:320px;margin:15vh auto;display:grid;gap:10px;font:16px system-ui">
-<h1>Espace boutique</h1><input type=email name=email placeholder="Email" autofocus required style="padding:10px">
-<input type=password name=mdp placeholder="Mot de passe" required style="padding:10px">
-<button style="padding:10px">Se connecter</button>{}</form>"""
+LOGIN = """<!DOCTYPE html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connexion – MEDMOHcoul collection</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0C1713;font:16px/1.55 Inter,system-ui,sans-serif;color:#17191B;padding:18px}
+form{background:#FAF8F4;width:min(420px,100%);padding:34px 30px;border-radius:16px;display:grid;gap:10px}
+.b{font:700 24px/1 'Cormorant Garamond',Georgia,serif}.b small{display:block;font:500 10px Inter,sans-serif;letter-spacing:.34em;text-transform:uppercase;color:#A9803A;margin-top:5px}
+h1{margin:18px 0 4px;font:600 30px/1.15 'Cormorant Garamond',Georgia,serif}
+input,button{font:inherit;font-size:15px;padding:13px 15px;border-radius:10px;border:1px solid #E7E3DB;background:#fff}
+button{background:#0F3D2E;border:0;color:#fff;font-weight:600;cursor:pointer;min-height:50px}.e{color:#B3261E;margin:0;font-size:14px}</style>
+<form method="post"><div class="b">MEDMOHcoul<small>collection</small></div><h1>Espace de gestion</h1>
+<input type="email" name="email" placeholder="Adresse e-mail" autocomplete="username" autofocus required>
+<input type="password" name="mdp" placeholder="Mot de passe" autocomplete="current-password" required>
+<button>Se connecter</button>@@MSG@@</form>"""
+
+
+def login(msg=""):
+    return LOGIN.replace("@@MSG@@", msg)
 
 
 @app.route("/admin", methods=["GET", "POST"])
@@ -249,7 +261,7 @@ def admin_page():
         mdp = request.form.get("mdp", "")[:128]
         k1, k2 = f"ip:{request.remote_addr}", f"mail:{request.remote_addr}|{email}"
         if verrouille(k1, 20) or verrouille(k2, 5):
-            return LOGIN.format("<p style='color:#b00'>Trop de tentatives. Réessayez dans 15 minutes.</p>"), 429
+            return login('<p class="e">Trop de tentatives. Veuillez réessayer dans 15 minutes.</p>'), 429
         with db() as c:
             u = c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
         ok = check_password_hash(u["mdp"] if u else FAUX_HASH, mdp) and u is not None
@@ -259,9 +271,9 @@ def admin_page():
             return redirect("/admin")
         echec(k1)
         echec(k2)
-        return LOGIN.format("<p style='color:#b00'>Email ou mot de passe incorrect.</p>"), 401
+        return login('<p class="e">Adresse e-mail ou mot de passe incorrect.</p>'), 401
     if not session.get("uid"):
-        return LOGIN.format("")
+        return login("")
     return send_from_directory(TPL, "admin.html")
 
 
