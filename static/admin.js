@@ -34,7 +34,10 @@ document.addEventListener("click", function(e){
 var ME = {};
 function chargerEquipe(){
   fetch("/api/admin/vendeurs").then(function(r){return r.json()}).then(function(d){
-    tv.innerHTML = d.map(function(v){return '<tr><td><strong>'+esc(v.nom)+'</strong><br><small>'+esc(v.email)+'</small></td><td><button data-m="'+v.id+'">Nouveau mot de passe</button> <button data-r="'+v.id+'">Retirer</button></td></tr>'}).join("") || '<tr><td>Aucun vendeur pour le moment.</td></tr>';
+    tv.innerHTML = d.map(function(v){
+      var g = v.role==="gerant", agir = !g || ME.proprio;
+      return '<tr><td><strong>'+esc(v.nom)+'</strong> <small>('+(g?'gérant':'vendeur')+')</small><br><small>'+esc(v.email)+'</small></td><td>'+(agir?'<button data-m="'+v.id+'">Nouveau mot de passe</button> <button data-r="'+v.id+'">Retirer</button>':'')+'</td></tr>';
+    }).join("") || '<tr><td>Personne d\'autre pour le moment.</td></tr>';
   });
 }
 fv.onsubmit = function(e){
@@ -47,7 +50,7 @@ fv.onsubmit = function(e){
 };
 document.addEventListener("click", function(e){
   var b = e.target;
-  if(b.dataset.r && confirm("Retirer ce vendeur ? Ses produits restent sur le site.")){
+  if(b.dataset.r && confirm("Retirer cette personne de l'équipe ? Ses produits restent sur le site.")){
     fetch("/api/admin/vendeurs/"+b.dataset.r,{method:"DELETE"}).then(function(){ chargerEquipe(); charger(); });
   }
   if(b.dataset.m){
@@ -57,7 +60,17 @@ document.addEventListener("click", function(e){
   }
 });
 fetch("/api/admin/moi").then(function(r){ if(!r.ok){ location.href="/admin/logout"; throw 0; } return r.json(); }).then(function(m){
-  ME = m; moi.textContent = "Connecté : "+m.nom+(m.role==="gerant"?" (gérant)":" (vendeur)");
+  ME = m; fv.elements.role.hidden = !m.proprio; moi.textContent = "Connecté : "+m.nom+(m.role==="gerant"?" (gérant)":" (vendeur)");
   if(m.role==="gerant"){ eq.hidden = false; chargerEquipe(); }
   charger();
 });
+
+fm.onsubmit = function(e){
+  e.preventDefault();
+  fetch("/api/admin/mon-mdp",{method:"POST",body:new FormData(fm)}).then(function(r){
+    if(r.status===401){ alert("Mot de passe actuel incorrect."); return; }
+    if(r.status===429){ alert("Trop de tentatives, réessayez plus tard."); return; }
+    if(!r.ok){ alert("Le nouveau mot de passe doit faire 8 à 128 caractères."); return; }
+    fm.reset(); alert("Mot de passe changé.");
+  });
+};

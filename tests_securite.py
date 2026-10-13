@@ -139,6 +139,33 @@ check("Vendeur ne peut pas supprimer un produit du gérant (403)", V.delete(f"/a
 cles = set(G.get("/api/produits").json["items"][0].keys())
 check("L'API publique ne fuit ni email ni mot de passe", cles <= {"id", "nom", "cat", "prix", "c", "img", "description", "tailles", "vendeur"}, cles)
 
+print("\n[9b] Second gérant")
+owner = sqlite3.connect(A.DB).execute("SELECT MIN(id) FROM users").fetchone()[0]
+CG = client()
+check("Le propriétaire est reconnu comme tel", G.get("/api/admin/moi").json["proprio"] is True)
+check("Rôle inconnu refusé (400)", G.post("/api/admin/vendeurs", data={"nom": "X", "email": "x@x.ml", "mdp": "motdepasse1", "role": "admin"}, headers=OR_OK).status_code == 400)
+check("Le propriétaire peut nommer un second gérant", G.post("/api/admin/vendeurs", data={"nom": "Bakary", "email": "bakary@x.ml", "mdp": "cogerant123", "role": "gerant"}, headers=OR_OK).status_code == 200)
+check("Connexion du second gérant", CG.post("/admin", data={"email": "bakary@x.ml", "mdp": "cogerant123"}).status_code == 302)
+check("Le second gérant n'est pas propriétaire", CG.get("/api/admin/moi").json["proprio"] is False)
+check("Le second gérant voit tous les produits", len(CG.get("/api/admin/produits").json) >= 3)
+check("Le second gérant peut ajouter un vendeur", CG.post("/api/admin/vendeurs", data={"nom": "Fanta", "email": "fanta@x.ml", "mdp": "vendeur456", "role": "vendeur"}, headers=OR_OK).status_code == 200)
+check("Le second gérant ne peut pas nommer un autre gérant (403)", CG.post("/api/admin/vendeurs", data={"nom": "Y", "email": "y@x.ml", "mdp": "motdepasse1", "role": "gerant"}, headers=OR_OK).status_code == 403)
+check("Le second gérant ne peut pas retirer le propriétaire (403)", CG.delete(f"/api/admin/vendeurs/{owner}", headers=OR_OK).status_code == 403)
+check("Le second gérant ne peut pas changer le mot de passe du propriétaire (403)", CG.post(f"/api/admin/vendeurs/{owner}/mdp", data={"mdp": "pirate12345"}, headers=OR_OK).status_code == 403)
+me = CG.get("/api/admin/moi").json
+check("On ne peut pas se retirer soi-même (403)", CG.delete(f"/api/admin/vendeurs/{[u for u in sqlite3.connect(A.DB).execute('SELECT id FROM users WHERE email=?', ('bakary@x.ml',))][0][0]}", headers=OR_OK).status_code == 403)
+check("Changement de mot de passe : ancien incorrect refusé (401)", CG.post("/api/admin/mon-mdp", data={"ancien": "faux", "nouveau": "nouveau12345"}, headers=OR_OK).status_code == 401)
+check("Changement de mot de passe : nouveau trop court refusé (400)", CG.post("/api/admin/mon-mdp", data={"ancien": "cogerant123", "nouveau": "123"}, headers=OR_OK).status_code == 400)
+check("Changement de mot de passe réussi", CG.post("/api/admin/mon-mdp", data={"ancien": "cogerant123", "nouveau": "nouveau12345"}, headers=OR_OK).status_code == 200)
+check("L'ancien mot de passe ne marche plus", client().post("/admin", data={"email": "bakary@x.ml", "mdp": "cogerant123"}).status_code == 401)
+check("Le nouveau mot de passe marche", client().post("/admin", data={"email": "bakary@x.ml", "mdp": "nouveau12345"}).status_code == 302)
+codes = [CG.post("/api/admin/mon-mdp", data={"ancien": f"x{i}", "nouveau": "nouveau98765"}, headers=OR_OK).status_code for i in range(6)]
+check("Devinettes du mot de passe actuel bloquées après 5 essais (429)", codes[:5] == [401] * 5 and codes[5] == 429, codes)
+check("Le propriétaire ne peut pas se retirer lui-même (403)", G.delete(f"/api/admin/vendeurs/{owner}", headers=OR_OK).status_code == 403)
+bak = [u for u in sqlite3.connect(A.DB).execute("SELECT id FROM users WHERE email=?", ("bakary@x.ml",))][0][0]
+check("Le propriétaire peut retirer le second gérant", G.delete(f"/api/admin/vendeurs/{bak}", headers=OR_OK).status_code == 200)
+check("Sa session cesse aussitôt de fonctionner (401)", CG.get("/api/admin/moi").status_code == 401)
+
 print("\n[10] Erreurs et méthodes")
 r = ANON.get("/nimporte-quoi")
 check("Page inconnue : message simple, pas de trace technique", r.status_code == 404 and b"Traceback" not in r.data and b"werkzeug" not in r.data.lower())

@@ -234,7 +234,7 @@ def register():
 
 
 LOGIN = """<!DOCTYPE html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>Connexion</title><form method=post style="max-width:320px;margin:15vh auto;display:grid;gap:10px;font:16px system-ui">
+<title>Connexion</title><style>*{{box-sizing:border-box}}</style><form method=post style="max-width:320px;margin:15vh auto;display:grid;gap:10px;font:16px system-ui">
 <h1>Espace boutique</h1><input type=email name=email placeholder="Email" autofocus required style="padding:10px">
 <input type=password name=mdp placeholder="Mot de passe" required style="padding:10px">
 <button style="padding:10px">Se connecter</button>{}</form>"""
@@ -271,10 +271,16 @@ def logout():
     return redirect("/admin")
 
 
+def proprio_id():
+    """Le propriétaire est le premier compte créé : il ne peut être ni retiré ni modifié par un autre gérant."""
+    with db() as c:
+        return c.execute("SELECT MIN(id) FROM users").fetchone()[0]
+
+
 @app.get("/api/admin/moi")
 @connecte()
 def moi():
-    return jsonify(nom=g.user["nom"], role=g.user["role"])
+    return jsonify(nom=g.user["nom"], role=g.user["role"], proprio=g.user["id"] == proprio_id())
 
 
 # ---------- Produits (le gérant voit tout, un vendeur voit les siens) ----------
@@ -380,17 +386,22 @@ def supprimer(pid):
 def vendeurs():
     with db() as c:
         return jsonify([dict(r) for r in c.execute(
-            "SELECT id,nom,email FROM users WHERE role='vendeur' ORDER BY id")])
+            "SELECT id,nom,email,role FROM users WHERE id<>? ORDER BY id", (g.user["id"],))])
 
 
 @app.post("/api/admin/vendeurs")
 @connecte("gerant")
 def ajouter_vendeur():
     f = request.form
+    role = f.get("role", "vendeur")
+    if role not in ("vendeur", "gerant"):
+        abort(400)
+    if role == "gerant" and g.user["id"] != proprio_id():
+        abort(403)  # seul le propriétaire nomme un gérant
     nom, email, h = valider(f.get("nom", ""), f.get("email", ""), f.get("mdp", ""))
     try:
         with db() as c:
-            c.execute("INSERT INTO users(nom,email,mdp,role) VALUES(?,?,?,'vendeur')", (nom, email, h))
+            c.execute("INSERT INTO users(nom,email,mdp,role) VALUES(?,?,?,?)", (nom, email, h, role))
     except sqlite3.IntegrityError:
         abort(409)
     return jsonify(ok=True)
@@ -403,7 +414,12 @@ def mdp_vendeur(uid):
     if not 8 <= len(mdp) <= 128:
         abort(400)
     with db() as c:
-        c.execute("UPDATE users SET mdp=? WHERE id=? AND role='vendeur'", (generate_password_hash(mdp), uid))
+        cible = c.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone()
+        if not cible:
+            abort(404)
+        if uid == g.user["id"] or (cible["role"] == "gerant" and g.user["id"] != proprio_id()):
+            abort(403)
+        c.execute("UPDATE users SET mdp=? WHERE id=?", (generate_password_hash(mdp), uid))
     return jsonify(ok=True)
 
 
@@ -411,8 +427,32 @@ def mdp_vendeur(uid):
 @connecte("gerant")
 def retirer_vendeur(uid):
     with db() as c:
+        cible = c.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone()
+        if not cible:
+            abort(404)
+        if uid == g.user["id"] or (cible["role"] == "gerant" and g.user["id"] != proprio_id()):
+            abort(403)
         c.execute("UPDATE produits SET vendeur_id=NULL WHERE vendeur_id=?", (uid,))
-        c.execute("DELETE FROM users WHERE id=? AND role='vendeur'", (uid,))
+        c.execute("DELETE FROM users WHERE id=?", (uid,))
+    return jsonify(ok=True)
+
+
+@app.post("/api/admin/mon-mdp")
+@connecte()
+def mon_mdp():
+    cle = f"pw:{g.user['id']}"
+    if verrouille(cle, 5):
+        abort(429)
+    f = request.form
+    if not check_password_hash(g.user["mdp"], f.get("ancien", "")[:128]):
+        echec(cle)
+        abort(401)
+    nouveau = f.get("nouveau", "")
+    if not 8 <= len(nouveau) <= 128:
+        abort(400)
+    reussite(cle)
+    with db() as c:
+        c.execute("UPDATE users SET mdp=? WHERE id=?", (generate_password_hash(nouveau), g.user["id"]))
     return jsonify(ok=True)
 
 
