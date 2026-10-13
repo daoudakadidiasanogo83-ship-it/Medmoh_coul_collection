@@ -51,7 +51,7 @@ Conseil : pour un vrai client, PythonAnywhere gratuit garde les données ; Rende
 
 Ce qui est en place : mots de passe hachés, verrouillage après 5 échecs (15 minutes), protection contre les requêtes venant d'autres sites (CSRF), en-têtes de sécurité et CSP stricte (aucun script externe ni inline), cookies HttpOnly + SameSite + Secure, vérification du contenu des images envoyées, couleurs et prix validés côté serveur, clé secrète aléatoire si `SECRET_KEY` n'est pas définie.
 
-Avant chaque mise en ligne : `python tests_securite.py` (78 contrôles automatiques, sur une base temporaire).
+Avant chaque mise en ligne : `python tests_securite.py` (contrôles automatiques, sur une base temporaire).
 
 Après la mise en ligne, faites aussi des scans externes sur l'adresse du site :
 - https://observatory.mozilla.org (en-têtes, cookies, CSP)
@@ -60,3 +60,17 @@ Après la mise en ligne, faites aussi des scans externes sur l'adresse du site :
 
 Réglages : `COOKIE_SECURE=0` seulement si le site est servi en http (déconseillé) ; en local sous PyCharm, `app.py` le désactive tout seul.
 Bonnes pratiques : mot de passe gérant long et unique, `pip install -U -r requirements.txt` régulièrement, sauvegarde de `boutique.db` et du dossier `uploads/`.
+
+## Démo gratuite, puis passage en payant (Render)
+
+Le dépôt contient deux fichiers : `render.yaml` (gratuit, c'est celui que Render lit) et `render-payant.yaml` (instance payante + disque `/data`).
+
+**Pendant la démo (gratuit)**
+1. Déployez avec `render.yaml` tel quel. Render demande `WHATSAPP` et `SETUP_CODE` : choisissez un code que vous seul connaissez.
+2. Ouvrez `/register`, saisissez le code d'installation et créez le compte gérant.
+3. Prévenez le client : sans disque, les produits et comptes saisis peuvent disparaître quand le service redémarre ou est redéployé. Le code d'installation empêche qu'un inconnu crée un compte gérant après un redémarrage.
+
+**Quand le client valide (payant)**
+1. Sur GitHub, remplacez tout le contenu de `render.yaml` par celui de `render-payant.yaml`, puis validez la modification.
+2. Render synchronise le Blueprint et demande une carte : c'est là que le paiement commence.
+3. Le disque `/data` est vide au départ : recréez le compte gérant sur `/register` (avec le code), puis les produits. Vérifiez que `DATA_DIR=/data` apparaît dans Environment.

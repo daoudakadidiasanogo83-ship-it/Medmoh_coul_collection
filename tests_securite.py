@@ -59,7 +59,11 @@ bad = [({"nom": "K", "email": "k@x.ml", "mdp": "123"}, "mot de passe trop court"
        ({"nom": "", "email": "k@x.ml", "mdp": "motdepasse1"}, "nom vide")]
 for d, n in bad:
     check(f"Refusé : {n}", ANON.post("/api/register", data=d).status_code == 400)
-r = G.post("/api/register", data={"nom": "Koné", "email": "K@X.ml", "mdp": "motdepasse1"})
+os.environ["SETUP_CODE"] = "code-test-123"
+check("Inscription refusée sans le code d'installation (401)", ANON.post("/api/register", data={"nom": "K", "email": "k@x.ml", "mdp": "motdepasse1"}).status_code == 401)
+check("Inscription refusée avec un mauvais code (401)", ANON.post("/api/register", data={"nom": "K", "email": "k@x.ml", "mdp": "motdepasse1", "code": "faux"}).status_code == 401)
+r = G.post("/api/register", data={"nom": "Koné", "email": "K@X.ml", "mdp": "motdepasse1", "code": "code-test-123"})
+os.environ.pop("SETUP_CODE")
 check("Premier compte accepté", r.status_code == 200)
 ck = r.headers.get("Set-Cookie", "")
 check("Cookie de session HttpOnly + SameSite=Lax", "HttpOnly" in ck and "SameSite=Lax" in ck, ck)

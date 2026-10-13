@@ -1,3 +1,4 @@
+import hmac
 import os
 import re
 import secrets
@@ -218,6 +219,9 @@ def register_page():
 @app.post("/api/register")
 def register():
     f = request.form
+    code = os.environ.get("SETUP_CODE")  # facultatif : code à fournir pour créer le compte gérant
+    if code and not hmac.compare_digest(f.get("code", "")[:128], code):
+        abort(401)
     nom, email, h = valider(f.get("nom", ""), f.get("email", ""), f.get("mdp", ""))
     with db() as c:  # insertion atomique : seul le tout premier compte est accepté
         n = c.execute("INSERT INTO users(nom,email,mdp,role) SELECT ?,?,?,'gerant' "

@@ -1,9 +1,10 @@
-# Déploiement Render (Blueprint). Le disque persistant exige une instance payante.
+# MODE DÉMO (gratuit) : pas de disque, les données peuvent être effacées au redémarrage ou au redéploiement.
+# Pour passer en payant quand le client valide : remplacez tout ce fichier par le contenu de render-payant.yaml.
 services:
   - type: web
     name: medmohcoul-boutique
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
@@ -11,9 +12,5 @@ services:
         generateValue: true
       - key: WHATSAPP
         sync: false          # Render vous demandera le numéro (ex. 22370000000)
-      - key: DATA_DIR
-        value: /data
-    disk:
-      name: boutique-data
-      mountPath: /data
-      sizeGB: 1
+      - key: SETUP_CODE
+        sync: false          # code d'installation : empêche un inconnu de créer le compte gérant

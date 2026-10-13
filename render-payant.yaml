@@ -1,0 +1,21 @@
+# VERSION PAYANTE : instance payante + disque persistant (les données survivent aux redéploiements).
+services:
+  - type: web
+    name: medmohcoul-boutique
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WHATSAPP
+        sync: false          # Render vous demandera le numéro (ex. 22370000000)
+      - key: SETUP_CODE
+        sync: false          # code d'installation : empêche un inconnu de créer le compte gérant
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: boutique-data
+      mountPath: /data
+      sizeGB: 1
