@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gérer les produits – MEDMOHcoul collection</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"><style>
+body{font:16px 'DM Sans',system-ui,sans-serif;max-width:900px;margin:0 auto;padding:18px 14px 60px;color:#141414;background:#F5F0E8}
+h1,h2{font-family:Syne,'Arial Black',sans-serif;letter-spacing:-.02em}
+table{width:100%;border-collapse:collapse}td{border-bottom:1px solid #E4DDD0;padding:10px 8px;vertical-align:middle}
+form{display:grid;gap:10px;margin:16px 0;padding:18px;background:#fff;border:1px solid #E4DDD0;border-radius:22px}
+input,button,textarea{font:inherit;padding:12px 14px;border-radius:12px;border:1.5px solid #E4DDD0}button{cursor:pointer;background:#fff;min-height:44px}
+form>button:not([type]){background:#141414;color:#fff;border:0;border-radius:99px;font-weight:700}
+img{width:52px;height:52px;object-fit:cover;border-radius:12px;display:block}.sw{width:52px;height:52px;border-radius:12px}
+</style>
+<h1>Produits de la boutique</h1>
+<p id="moi"></p>
+<form id="f">
+<input type="hidden" name="pid">
+<input name="nom" placeholder="Nom du produit" required>
+<input name="cat" placeholder="Catégorie (Homme, Femme, Accessoires...)" required>
+<input name="prix" type="number" min="0" placeholder="Prix en FCFA" required>
+<textarea name="description" rows="3" maxlength="1000" placeholder="Description (matière, coupe, entretien…)"></textarea>
+<input name="tailles" placeholder="Tailles séparées par une virgule (ex. S, M, L, XL). Vide = taille unique">
+<label>Couleur (si pas de photo) <input name="c" type="color" value="#1B2A6B"></label>
+<label>Photo <input name="image" type="file" accept="image/*"></label>
+<label><input name="actif" type="checkbox" checked> Visible sur le site</label>
+<button id="ok">Ajouter le produit</button>
+<button type="button" id="annuler" hidden>Annuler la modification</button>
+</form>
+<table><tbody id="t"></tbody></table>
+<section id="eq" hidden>
+<h2>Vendeurs</h2>
+<form id="fv"><input name="nom" placeholder="Nom du vendeur" required><input name="email" type="email" placeholder="Email du vendeur" required><input name="mdp" type="password" minlength="8" placeholder="Mot de passe (8 caractères minimum)" required><button>Ajouter le vendeur</button></form>
+<table><tbody id="tv"></tbody></table>
+</section>
+<p><a href="/">Voir le site</a> · <a href="/admin/logout">Se déconnecter</a></p>
+<script src="/static/admin.js" defer></script>
